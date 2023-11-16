@@ -1,1 +1,34 @@
-# Bloku-grandiniu-simuliacija
+## Paprasto blokų grandinės modelio simuliacija
+
+Šis Python scenarijus simuliuoja pagrindinį blokų grandinės sistemą su naudotojais, sandoriais ir kasimu. Jame naudojama speciali C++ maišos funkcijų biblioteka patikimoms maišoms apskaičiuoti.
+
+### Priklausomybės
+
+- `ctypes`: Naudojama sąsajai su C++ maišos funkcijų biblioteka.
+- `random`: Naudota generuojant atsitiktinius dydžius simuliacijos metu.
+- `time`: Teikia laiko žymės funkcionalumą blokams.
+
+### Svarbios klasės
+
+- **User**: Atstovauja naudotojui su vardu, viešuoju raktu ir balansu.
+- **Transaction**: Atstovauja sandoriui su unikaliu ID, siuntėju, gavėju ir suma.
+- **Block**: Atstovauja blokui su sandoriais, ankstesnio bloko maiša, laiko žyma, nūnė ir bloko maišu.
+
+### Blokų grandinės veiksmai
+
+- `print_block`: Rodo naujausio arba nurodyto bloko informaciją.
+- `mine_block`: Kasuoja bloką su nurodytu sunkumu.
+- `process_transactions`: Atnaujina naudotojų balansus pagal sandorius.
+- `add_block_to_chain`: Prideda iškastą bloką į blokų grandinę.
+- `run_simulation`: Simuliuoja blokų grandiną su atsitiktiniais naudotojais ir sandoriais.
+
+### Kaip paleisti
+
+1. Užtikrinkite, kad `custom_hash.so` biblioteka būtų sukompiliuota.
+2. Paleiskite scenarijų:
+
+```bash
+python script_name.py
+```
+
+Jūs galite laisvai keisti simuliacijos parametrus `run_simulation` metode, norėdami matyti skirtingas scenarijų situacijas.
