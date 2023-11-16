@@ -91,18 +91,6 @@ class Blockchain:
             block.hash = block.calculate_hash()
         print("Block mined!\n", block.nonce)
 
-    def process_transactions(self, block):
-        for transaction in block.transactions:
-            sender = next(user for user in self.users if user.public_key == transaction.sender)
-            recipient = next(user for user in self.users if user.public_key == transaction.recipient)
-
-            if sender.balance >= transaction.amount:
-                sender.balance -= transaction.amount
-                recipient.balance += transaction.amount
-                print(f"Transaction {transaction.transaction_id} processed successfully.")
-            else:
-                print(f"Transaction {transaction.transaction_id} failed: Insufficient funds.")
-        print()
     #Bloko pridejimas
     def add_block_to_chain(self, block):
         self.chain.append(block)
@@ -123,7 +111,6 @@ class Blockchain:
             selected_transactions = random.sample(self.transaction_pool, block_size)
             new_block = Block(selected_transactions, self.chain[-1].hash)
 
-            self.process_transactions(new_block)
             self.mine_block(new_block, difficulty)
             self.add_block_to_chain(new_block)
             self.print_block(new_block)
