@@ -1,6 +1,8 @@
 ## Paprasto blokų grandinės modelio simuliacija
 
-Šis Python scenarijus simuliuoja pagrindinį blokų grandinės sistemą su naudotojais, sandoriais ir kasimu. Jame naudojama speciali C++ maišos funkcijų biblioteka patikimoms maišoms apskaičiuoti.
+Pirmoje versijoje dar nėra pilnai veikiančių transakcijų įgyvendinimo.
+
+Šis Python scenarijus simuliuoja pagrindinį blokų grandinės sistemą su naudotojais, sandoriais ir kasimu. Jame naudojama anksčiau parašyta C++ hash funkcijų biblioteka. 
 
 ### Priklausomybės
 
