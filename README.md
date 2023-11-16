@@ -28,7 +28,8 @@
 2. Paleiskite scenarijų:
 
 ```bash
-python script_name.py
+python3 blokugrandine.py
 ```
 
-Jūs galite laisvai keisti simuliacijos parametrus `run_simulation` metode, norėdami matyti skirtingas scenarijų situacijas.
+Jūs galite laisvai keisti simuliacijos parametrus `run_simulation`, norėdami matyti skirtingas scenarijų situacijas.
+blockchain.run_simulation(num_users=100, num_transactions=1000, block_size=2, difficulty=1, max_blocks=10000000000)
