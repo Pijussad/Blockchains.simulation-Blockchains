@@ -12,7 +12,7 @@
 
 - **User**: Atstovauja naudotojui su vardu, viešuoju raktu ir balansu.
 - **Transaction**: Atstovauja sandoriui su unikaliu ID, siuntėju, gavėju ir suma.
-- **Block**: Atstovauja blokui su sandoriais, ankstesnio bloko maiša, laiko žyma, nūnė ir bloko maišu.
+- **Block**: Atstovauja blokui su sandoriais, ankstesnio bloko hashu, laiko žyma, Nonce ir paties bloko hashu.
 
 ### Blokų grandinės veiksmai
 
