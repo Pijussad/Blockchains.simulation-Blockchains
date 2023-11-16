@@ -24,8 +24,8 @@
 
 ### Kaip paleisti
 
-1. Užtikrinkite, kad `custom_hash.so` biblioteka būtų sukompiliuota.
-2. Paleiskite scenarijų:
+1. Užtikrinkite, kad `custom_hash.so` biblioteka būtų tame pačiame faile.
+2. Paleiskite:
 
 ```bash
 python3 blokugrandine.py
