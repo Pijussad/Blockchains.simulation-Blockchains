@@ -223,7 +223,11 @@ public:
             block.nonce++;
             block.hash = block.calculate_hash();
         }
-        cout << "Blokas iškastas!\n" << block.nonce << "\n";
+        cout << "Blokas iškastas!\n" << "Nonce: " << block.nonce << "\n";
+        cout << "Procesuojamos transakcijos:\n";
+        for (const auto& transaction : block.transactions) {
+            print_transaction_details(transaction);
+        }
     }
 
     // Funkcija, kuri prideda bloką prie grandinės
