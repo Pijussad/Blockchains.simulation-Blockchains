@@ -6,7 +6,7 @@ Pirmoje versijoje dar nėra pilnai veikiančių transakcijų įgyvendinimo.
 
 ### Priklausomybės
 
-- `ctypes`: Naudojama sąsajai su C++ maišos funkcijų biblioteka.
+- `ctypes`: Naudojama sąsajai su C++ hash funkcijų biblioteka.
 - `random`: Naudota generuojant atsitiktinius dydžius simuliacijos metu.
 - `time`: Teikia laiko žymės funkcionalumą blokams.
 
