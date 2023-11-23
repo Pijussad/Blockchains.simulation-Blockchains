@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <sstream>
+#include <map>
 
 using namespace std;
 
@@ -41,6 +42,12 @@ string bytes_to_hex(const vector<char>& bytes) {
 
     return hex_stream.str();
 }
+
+// Deklaracija Transaction klasės
+class Transaction;
+
+// Funkcijos deklaracija
+vector<char> compute_merkel_root(const vector<Transaction>& transactions);
 
 class User {
 private:
@@ -115,6 +122,33 @@ private:
     }
 };
 
+vector<char> compute_merkel_root(const vector<Transaction>& transactions) {
+    if (transactions.empty()) {
+        return vector<char>(HASH_SIZE_BYTES, 0);
+    }
+
+    vector<string> hashes;
+    for (const auto& tx : transactions) {
+        hashes.push_back(tx.getTransactionId());
+    }
+
+    while (hashes.size() > 1) {
+        if (hashes.size() % 2 != 0) {
+            hashes.push_back(hashes.back()); // Dubliuoti paskutinį hash, jei nelyginis hashų skaičius
+        }
+
+        vector<string> new_hashes;
+        for (size_t i = 0; i < hashes.size(); i += 2) {
+            string concatenated = hashes[i] + hashes[i + 1];
+            new_hashes.push_back(bytes_to_hex(customHash(concatenated)));
+        }
+
+        hashes = new_hashes;
+    }
+
+    return customHash(hashes.front());
+}
+
 class Blockchain;
 
 class Block {
@@ -125,20 +159,15 @@ public:
     int nonce;
     string hash;
 
-    // Konstruktorius, kuris sukuria bloką su transakcijomis ir ankstesnio bloko "hash"
+    // Konstruktorius
     Block(const vector<Transaction>& transactions, const string& previous_hash)
         : transactions(transactions), previous_hash(previous_hash), nonce(0), timestamp(time(nullptr)) {
         hash = calculate_hash();
     }
 
-    // Funkcija, kuri skaičiuoja naują bloko "hash"
+    // Funkcija skaičiuoti bloko hash
     string calculate_hash() const {
-        string data;
-
-        for (const auto& transaction : transactions) {
-            data += transaction.getTransactionId();
-        }
-
+        string data = bytes_to_hex(compute_merkel_root(transactions));
         data += previous_hash + to_string(timestamp) + to_string(nonce);
         return bytes_to_hex(customHash(data));
     }
@@ -148,6 +177,7 @@ class Blockchain {
 private:
     vector<Block> chain;
     vector<Transaction> transaction_pool;
+    map<string, int> balances; // Laikyti vartotojų balansus
 
 public:
     // Funkcija, kuri sukuria pirminį bloką (genesis block)
@@ -171,6 +201,27 @@ public:
     }
 
     // Funkcija, kuri sukuria nurodytą kiekį atsitiktinių pavedimų tarp vartotojų
+    bool add_transaction_to_pool(const Transaction& transaction) {
+        // Balanso patikrinimas
+        if (balances[transaction.getSender()] < transaction.getAmount()) {
+            cout << "Pavedimas atmestas: nepakanka lėšų" << endl;
+            return false;
+        }
+
+        // Pavedimo hash patikrinimas
+        vector<char> calculated_hash = customHash(transaction.getSender() + transaction.getRecipient() + to_string(transaction.getAmount()));
+        if (bytes_to_hex(calculated_hash) != transaction.getTransactionId()) {
+            cout << "Pavedimas atmestas: netinkamas hash" << endl;
+            return false;
+        }
+
+        // Jei abu patikrinimai praėjo, pridėti pavedimą į pool'ą
+        transaction_pool.push_back(transaction);
+        cout << "Pavedimas sėkmingai pridėtas į pool'ą!" << endl;
+        return true;
+    }
+
+    // Pakeisti create_random_transactions funkciją naudojant add_transaction_to_pool
     vector<Transaction> create_random_transactions(int num_transactions, const vector<User>& users) {
         vector<Transaction> transactions;
 
@@ -179,7 +230,13 @@ public:
             string recipient = users[rand() % users.size()].getPublicKey();
             int amount = rand() % 1000 + 1;
 
-            transactions.push_back(Transaction(sender, recipient, amount));
+            Transaction transaction(sender, recipient, amount);
+            if (add_transaction_to_pool(transaction)) {
+                transactions.push_back(transaction);
+                // Atnaujinti balansą
+                balances[sender] -= amount;
+                balances[recipient] += amount;
+            }
         }
 
         return transactions;
@@ -230,7 +287,7 @@ public:
     void add_block_to_chain(const Block& block) {
     chain.push_back(block);
 
-    // Remove transactions that are included in the new block
+    // Ištrinti pavedimus, kurie įtraukti į naują bloką
     transaction_pool.erase(
         remove_if(transaction_pool.begin(), transaction_pool.end(),
             [&block](const Transaction& transaction) {
@@ -243,18 +300,25 @@ public:
 }
 
 
-    // Funkcija, kuri vykdo simuliaciją su nurodytomis parametrais
+    void initialize_balances(const vector<User>& users) {
+        for (const auto& user : users) {
+            balances[user.getPublicKey()] = user.getBalance();
+        }
+    }
+
+    // Pakeisti run_simulation funkciją, kad inicializuotumėte balansus
     void run_simulation(int num_users, int num_transactions, int block_size, int difficulty, int max_blocks) {
         srand(static_cast<unsigned int>(time(nullptr)));
 
         vector<User> users = create_random_users(num_users);
+        initialize_balances(users); // Inicializuoti balansus
         transaction_pool = create_random_transactions(num_transactions, users);
 
         int blocks_mined = 0;
 
         while (!transaction_pool.empty() && blocks_mined < max_blocks) {
-            cout << "Transaction pool size: " << transaction_pool.size() << endl;
-cout << "Blocks mined: " << blocks_mined << endl;
+            cout << "Pavedimų pool'o dydis: " << transaction_pool.size() << endl;
+cout << "Iškasti blokai: " << blocks_mined << endl;
             vector<Transaction> selected_transactions;
 
             for (int i = 0; i < block_size && i < transaction_pool.size(); ++i) {
