@@ -273,14 +273,48 @@ public:
               << "Gavėjas: " << transaction.getRecipient() << "\n"
               << "Suma: " << transaction.getAmount() << "\n";
     }
+    vector<Block> create_candidate_blocks(int num_candidates, int transactions_per_block) {
+    vector<Block> candidates;
+    for (int i = 0; i < num_candidates; ++i) {
+        vector<Transaction> selected_transactions = select_random_transactions(transactions_per_block);
+        candidates.emplace_back(selected_transactions, chain.back().hash);
+    }
+    return candidates;
+}
+
+
+
+    // Function to select a random subset of transactions from the pool
+    vector<Transaction> select_random_transactions(int count) {
+    vector<Transaction> selected;
+    if (transaction_pool.size() < count) count = transaction_pool.size();
+    
+    random_shuffle(transaction_pool.begin(), transaction_pool.end()); // Randomize the pool
+
+    for (int i = 0; i < count; ++i) {
+        selected.push_back(transaction_pool[i]);
+    }
+
+    return selected;
+}
+
+
 
     // Funkcija, kuri iškasuoja bloką su nurodytu sunkumu
-    void mine_block(Block& block, int difficulty) const {
-        while (stoi(block.hash.substr(0, difficulty), nullptr, 16) != 0) {
+    bool try_mine_block(Block& block, int difficulty, int time_limit, int max_attempts) {
+        auto start_time = chrono::steady_clock::now();
+        int attempts = 0;
+
+        while (chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count() < time_limit && attempts < max_attempts) {
             block.nonce++;
             block.hash = block.calculate_hash();
+            if (stoi(block.hash.substr(0, difficulty), nullptr, 16) == 0) {
+                cout << "Block mined successfully!\nNonce: " << block.nonce << "\n";
+                return true;
+            }
+            attempts++;
         }
-        cout << "Blokas iškastas!\nNonce: " << block.nonce << "\n";
+        return false;
     }
 
     // Funkcija, kuri prideda bloką prie grandinės
@@ -307,36 +341,47 @@ public:
     }
 
     // Pakeisti run_simulation funkciją, kad inicializuotumėte balansus
-    void run_simulation(int num_users, int num_transactions, int block_size, int difficulty, int max_blocks) {
-        srand(static_cast<unsigned int>(time(nullptr)));
+    void run_simulation(int num_users, int num_transactions, int block_size, int difficulty, int max_blocks){
+    srand(static_cast<unsigned int>(time(nullptr)));
 
-        vector<User> users = create_random_users(num_users);
-        initialize_balances(users); // Inicializuoti balansus
-        transaction_pool = create_random_transactions(num_transactions, users);
+    // Create random users and initialize their balances
+    vector<User> users = create_random_users(num_users);
+    initialize_balances(users);
+    
+    // Create random transactions and add them to the pool
+    create_random_transactions(num_transactions, users);
 
-        int blocks_mined = 0;
+    int blocks_mined = 0;
+    int time_limit = 5; // Initial time limit in seconds
+    int max_attempts = 100000; // Initial maximum number of hash attempts
 
-        while (!transaction_pool.empty() && blocks_mined < max_blocks) {
-            cout << "Pavedimų pool'o dydis: " << transaction_pool.size() << endl;
-cout << "Iškasti blokai: " << blocks_mined << endl;
-            vector<Transaction> selected_transactions;
+    while (!transaction_pool.empty() && blocks_mined < max_blocks) {
+        // Create 5 candidate blocks
+        vector<Block> candidates = create_candidate_blocks(5, block_size);
+        bool block_mined = false;
 
-            for (int i = 0; i < block_size && i < transaction_pool.size(); ++i) {
-                selected_transactions.push_back(transaction_pool[i]);
+        // Attempt to mine each candidate block
+        for (auto& candidate : candidates) {
+            if (try_mine_block(candidate, difficulty, time_limit, max_attempts)) {
+                // If successful, add the block to the chain and break the loop
+                add_block_to_chain(candidate);
+                printBlock();
+                blocks_mined++;
+                block_mined = true;
+                break;
             }
-
-            Block new_block(selected_transactions, chain.back().hash);
-
-            mine_block(new_block, difficulty);
-            add_block_to_chain(new_block);
-            printBlock(new_block.transactions.empty() ? -1 : chain.size() - 2);
-
-            blocks_mined++;
         }
 
-        cout << "Simuliacija baigta po iškasto " << blocks_mined << " bloko(-ų).\n";
-        printBlock(2);
+        if (!block_mined) {
+            // If no block was mined successfully, double the time limit and max attempts
+            time_limit *= 2;
+            max_attempts *= 2;
+        }
     }
+
+    cout << "Simulation ended after mining " << blocks_mined << " block(s).\n";
+}
+
 };
 
 int main() {
