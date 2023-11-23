@@ -48,8 +48,8 @@ private:
     string public_key;
     int balance;
 
+// Konstruktorius, kuris sukuria vartotoją su unikaliu viešuoju raktu
 public:
-    // Konstruktorius, kuris sukuria vartotoją su unikaliu viešuoju raktu
     User(const string& name, int balance) : name(name), balance(balance) {
         setPublicKey(customHash(name));
     }
@@ -66,8 +66,11 @@ public:
         return balance;
     }
 
-private:
-    // Funkcija, kuri nustato viešąjį raktą iš baitų masyvo
+    void setBalance(int newBalance) {
+        balance = newBalance;
+    }
+
+private:// Funkcija, kuri nustato viešąjį raktą iš baitų masyvo
     void setPublicKey(const vector<char>& bytes) {
         public_key = bytes_to_hex(bytes);
     }
@@ -75,19 +78,18 @@ private:
 
 class Transaction {
 private:
-    string transaction_id;
+    vector<char> transaction_id;
     string sender;
     string recipient;
     int amount;
 
 public:
-    // Konstruktorius, kuris sukuria unikalų pavedimo identifikatorių
-    Transaction(const string& sender, const string& recipient, int amount)
+    Transaction(const string& sender, const string& recipient, int amount) // Konstruktorius, kuris sukuria unikalų pavedimo identifikatorių
         : sender(sender), recipient(recipient), amount(amount) {
         setTransactionId(customHash(sender + recipient + to_string(amount)));
     }
 
-    string getTransactionId() const {
+    const vector<char>& getTransactionId() const {
         return transaction_id;
     }
 
@@ -103,15 +105,16 @@ public:
         return amount;
     }
 
-    // Palyginimo operatorius, kuris lygina pavedimus pagal identifikatorių
-    bool operator==(const Transaction& other) const {
-        return transaction_id == other.transaction_id;
+    bool operator==(const Transaction& other) const { // Palyginimo operatorius, kuris lygina pavedimus pagal identifikatorių
+        return transaction_id == other.transaction_id &&
+               sender == other.sender &&
+               recipient == other.recipient &&
+               amount == other.amount;
     }
 
 private:
-    // Funkcija, kuri nustato pavedimo identifikatorių iš baitų masyvo
-    void setTransactionId(const vector<char>& bytes) {
-        transaction_id = bytes_to_hex(bytes);
+    void setTransactionId(const vector<char>& bytes) { // Funkcija, kuri nustato pavedimo identifikatorių iš baitų masyvo
+        transaction_id = bytes;
     }
 };
 
@@ -125,37 +128,31 @@ public:
     int nonce;
     string hash;
 
-    // Konstruktorius, kuris sukuria bloką su transakcijomis ir ankstesnio bloko "hash"
-    Block(const vector<Transaction>& transactions, const string& previous_hash)
+    Block(const vector<Transaction>& transactions, const string& previous_hash) // Konstruktorius, kuris sukuria bloką su transakcijomis ir ankstesnio bloko "hash"
         : transactions(transactions), previous_hash(previous_hash), nonce(0), timestamp(time(nullptr)) {
         hash = calculate_hash();
     }
 
-    // Funkcija skaičiuoti Merklio šaknies hash'ą
-    string calculate_merkle_root() const {
-    vector<string> transaction_hashes;
+    string calculate_merkle_root() const { // Funkcija, kuri skaičiuoja naują bloko "hash"
+    vector<vector<char>> transaction_hashes;
 
-    // Rinkti pavedimų hash'us
     for (const auto& transaction : transactions) {
         transaction_hashes.push_back(transaction.getTransactionId());
     }
 
-    // Sukurti binarinį Merklio medį
     while (transaction_hashes.size() > 1) {
-        vector<string> new_hashes;
+        vector<vector<char>> new_hashes;
 
-        // Sujungti poras hash'ų ir juos kartu hash'inti
         for (size_t i = 0; i < transaction_hashes.size(); i += 2) {
-            string combined_hash = transaction_hashes[i];
+    vector<char> combined_hash = transaction_hashes[i];
 
-            if (i + 1 < transaction_hashes.size()) {
-                combined_hash += transaction_hashes[i + 1];
-            }
+    if (i + 1 < transaction_hashes.size()) {
+        combined_hash.insert(combined_hash.end(), transaction_hashes[i + 1].begin(), transaction_hashes[i + 1].end());
+    }
 
-            new_hashes.push_back(bytes_to_hex(customHash(combined_hash)));
-        }
+    new_hashes.push_back(customHash(bytes_to_hex(combined_hash)));
+}
 
-        // Jei hash'ų skaičius yra nelyginis, pasikartoti paskutinį
         if (transaction_hashes.size() % 2 == 1) {
             new_hashes.push_back(transaction_hashes.back());
         }
@@ -163,20 +160,20 @@ public:
         transaction_hashes = new_hashes;
     }
 
-    // Galutinis hash yra Merklio šaknis
-    return (transaction_hashes.empty() ? "" : transaction_hashes[0]);
+    return (transaction_hashes.empty() ? "" : bytes_to_hex(transaction_hashes[0]));
 }
 
-string calculate_hash() const {
-    string merkle_root = calculate_merkle_root();
 
-    if (merkle_root.empty()) {
-        return "";
+    string calculate_hash() const {
+        string merkle_root = calculate_merkle_root();
+
+        if (merkle_root.empty()) {
+            return "";
+        }
+
+        string data = merkle_root + previous_hash + to_string(timestamp) + to_string(nonce);
+        return bytes_to_hex(customHash(data));
     }
-
-    string data = merkle_root + previous_hash + to_string(timestamp) + to_string(nonce);
-    return bytes_to_hex(customHash(data));
-}
 };
 
 class Blockchain {
@@ -185,8 +182,7 @@ private:
     vector<Transaction> transaction_pool;
 
 public:
-    // Funkcija, kuri sukuria pirminį bloką (genesis block)
-    Block create_genesis_block() {
+    Block create_genesis_block() {  // Funkcija, kuri sukuria pirminį bloką (genesis block)
         return Block(vector<Transaction>(), "0");
     }
 
@@ -194,8 +190,7 @@ public:
         chain.push_back(create_genesis_block());
     }
 
-    // Funkcija, kuri sukuria nurodytą kiekį atsitiktinių vartotojų
-    vector<User> create_random_users(int num_users) {
+    vector<User> create_random_users(int num_users) { // Funkcija, kuri sukuria nurodytą kiekį atsitiktinių vartotojų
         vector<User> users;
 
         for (int i = 0; i < num_users; ++i) {
@@ -205,8 +200,7 @@ public:
         return users;
     }
 
-    // Funkcija, kuri sukuria nurodytą kiekį atsitiktinių pavedimų tarp vartotojų
-    vector<Transaction> create_random_transactions(int num_transactions, const vector<User>& users) {
+    vector<Transaction> create_random_transactions(int num_transactions, const vector<User>& users) {  // Funkcija, kuri sukuria nurodytą kiekį atsitiktinių pavedimų tarp vartotojų
         vector<Transaction> transactions;
 
         for (int i = 0; i < num_transactions; ++i) {
@@ -228,8 +222,7 @@ public:
         return transaction_pool;
     }
 
-    // Funkcija, kuri spausdina bloko informaciją
-    void printBlock(int block_index = -1) const {
+    void printBlock(int block_index = -1) const { // Funkcija, kuri spausdina bloko informaciją
         int last_block_index = chain.size() - 1;
         const Block& block = (block_index == -1 || block_index > last_block_index) ? chain[last_block_index] : chain[block_index];
 
@@ -244,25 +237,27 @@ public:
         }
     }
 
-    // Funkcija, kuri spausdina pavedimo informaciją
-    void print_transaction_details(const Transaction& transaction) const {
-        cout << "Pavedimo ID: " << transaction.getTransactionId() << "\n"
-              << "Siuntėjas: " << transaction.getSender() << "\n"
-              << "Gavėjas: " << transaction.getRecipient() << "\n"
-              << "Suma: " << transaction.getAmount() << "\n";
-    }
+    void print_transaction_details(const Transaction& transaction) const { // Funkcija, kuri spausdina pavedimo informaciją
+    cout << "Pavedimo ID: " << bytes_to_hex(transaction.getTransactionId()) << "\n"
+          << "Siuntėjas: " << transaction.getSender() << "\n"
+          << "Gavėjas: " << transaction.getRecipient() << "\n"
+          << "Suma: " << transaction.getAmount() << "\n";
+}
 
-    // Funkcija, kuri iškasuoja bloką su nurodytu sunkumu
-    void mine_block(Block& block, int difficulty) const {
+
+    void mine_block(Block& block, int difficulty) const {  // Funkcija, kuri iškasuoja bloką su nurodytu sunkumu
         while (stoi(block.hash.substr(0, difficulty), nullptr, 16) != 0) {
             block.nonce++;
             block.hash = block.calculate_hash();
         }
-        cout << "Blokas iškastas!\n" << block.nonce << "\n";
+        cout << "Blokas iškastas!\n" << "Nonce: " << block.nonce << "\n";
+        cout << "Procesuojamos transakcijos:\n";
+        for (const auto& transaction : block.transactions) {
+            print_transaction_details(transaction);
+        }
     }
 
-    // Funkcija, kuri prideda bloką prie grandinės
-    void add_block_to_chain(const Block& block) {
+    void add_block_to_chain(const Block& block) { // Funkcija, kuri prideda bloką prie grandinės
         chain.push_back(block);
         transaction_pool.erase(remove_if(transaction_pool.begin(), transaction_pool.end(),
                                [block](const Transaction& transaction) {
@@ -271,36 +266,73 @@ public:
                                transaction_pool.end());
     }
 
-    // Funkcija, kuri vykdo simuliaciją su nurodytomis parametrais
-    void run_simulation(int num_users, int num_transactions, int block_size, int difficulty, int max_blocks) {
-        srand(static_cast<unsigned int>(time(nullptr)));
+    bool process_transaction(vector<User>& users, Transaction& transaction) {
+    auto sender = find_if(users.begin(), users.end(), [&](const User& user) {
+        return user.getPublicKey() == transaction.getSender();
+    });
 
-        vector<User> users = create_random_users(num_users);
-        transaction_pool = create_random_transactions(num_transactions, users);
+    auto recipient = find_if(users.begin(), users.end(), [&](const User& user) {
+        return user.getPublicKey() == transaction.getRecipient();
+    });
 
-        int blocks_mined = 0;
+    if (sender != users.end() && recipient != users.end() && sender->getBalance() >= transaction.getAmount()) {
+        if (bytes_to_hex(transaction.getTransactionId()) == bytes_to_hex(customHash(transaction.getSender() + transaction.getRecipient() + to_string(transaction.getAmount())))) {
+            sender->setBalance(sender->getBalance() - transaction.getAmount());
+            recipient->setBalance(recipient->getBalance() + transaction.getAmount());
+            cout << "Transaction processed successfully." << endl;
+            return true;
+        } else {
+            cout << "Transaction failed: Invalid transaction hash." << endl;
+        }
+    } else {
+        cout << "Transaction failed: Insufficient funds." << endl;
+    }
 
-        while (!transaction_pool.empty() && blocks_mined < max_blocks) {
-            vector<Transaction> selected_transactions;
+    // Remove the processed transaction from the transaction pool
+    transaction_pool.erase(remove_if(transaction_pool.begin(), transaction_pool.end(),
+                           [&](const Transaction& pool_transaction) {
+                               return pool_transaction == transaction;
+                           }),
+                           transaction_pool.end());
 
-            for (int i = 0; i < block_size; ++i) {
-                selected_transactions.push_back(Transaction(users[rand() % users.size()].getPublicKey(),
-                                                            users[rand() % users.size()].getPublicKey(),
-                                                            rand() % 1000 + 1));
-            }
+    return false;
+}
 
-            Block new_block(selected_transactions, chain.back().hash);
 
-            mine_block(new_block, difficulty);
-            add_block_to_chain(new_block);
-            printBlock(new_block.transactions.empty() ? -1 : chain.size() - 2);
+   // Funkcija, kuri vykdo simuliaciją su nurodytomis parametrais
+void run_simulation(int num_users, int num_transactions, int block_size, int difficulty, int max_blocks) {
+    srand(static_cast<unsigned int>(time(nullptr)));
 
-            blocks_mined++;
+    vector<User> users = create_random_users(num_users);
+    transaction_pool = create_random_transactions(num_transactions, users);
+
+    int blocks_mined = 0;
+
+    while (!transaction_pool.empty() && blocks_mined < max_blocks) {
+        vector<Transaction> selected_transactions;
+
+        for (int i = 0; i < block_size; ++i) {
+            selected_transactions.push_back(Transaction(users[rand() % users.size()].getPublicKey(),
+                                                        users[rand() % users.size()].getPublicKey(),
+                                                        rand() % 1000 + 1));
         }
 
-        cout << "Simuliacija baigta po iškasto " << blocks_mined << " bloko(-ų).\n";
-        printBlock(2);
+        Block new_block(selected_transactions, chain.back().hash);
+
+        mine_block(new_block, difficulty);
+        add_block_to_chain(new_block);
+        printBlock(new_block.transactions.empty() ? -1 : chain.size() - 2);
+
+        for (auto& transaction : new_block.transactions) {
+            process_transaction(users, transaction);
+        }
+
+        blocks_mined++;
     }
+
+    cout << "Simuliacija baigta po iškasto " << blocks_mined << " bloko(-ų).\n";
+    printBlock(2);
+}
 };
 
 int main() {
