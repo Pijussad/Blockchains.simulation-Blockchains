@@ -23,7 +23,7 @@ vector<char> customHash(const string& input) {
             hash[i] = hash[i] | ((i + 2) * 23);
             hash[i] = (hash[i] + symbol + (i % 7)) ^ ((hash[i] << 5) | (hash[i] >> 3));
             hash[i] = hash[HASH_SIZE_BYTES - 1 - i] * 15 + hash[i];
-            hash[i] = hash[HASH_SIZE_BYTES - i] * 10 + hash[i];
+            hash[i] = hash[HASH_SIZE_BYTES - i - 1] * 10 + hash[i];
         }
     }
 
@@ -223,18 +223,25 @@ public:
             block.nonce++;
             block.hash = block.calculate_hash();
         }
-        cout << "Blokas iškastas!\n" << block.nonce << "\n";
+        cout << "Blokas iškastas!\nNonce: " << block.nonce << "\n";
     }
 
     // Funkcija, kuri prideda bloką prie grandinės
     void add_block_to_chain(const Block& block) {
-        chain.push_back(block);
-        transaction_pool.erase(remove_if(transaction_pool.begin(), transaction_pool.end(),
-                               [block](const Transaction& transaction) {
-                                   return find(block.transactions.begin(), block.transactions.end(), transaction) != block.transactions.end();
-                               }),
-                               transaction_pool.end());
-    }
+    chain.push_back(block);
+
+    // Remove transactions that are included in the new block
+    transaction_pool.erase(
+        remove_if(transaction_pool.begin(), transaction_pool.end(),
+            [&block](const Transaction& transaction) {
+                return find_if(block.transactions.begin(), block.transactions.end(),
+                               [&transaction](const Transaction& blockTrans) {
+                                   return blockTrans.getTransactionId() == transaction.getTransactionId();
+                               }) != block.transactions.end();
+            }),
+        transaction_pool.end());
+}
+
 
     // Funkcija, kuri vykdo simuliaciją su nurodytomis parametrais
     void run_simulation(int num_users, int num_transactions, int block_size, int difficulty, int max_blocks) {
@@ -246,12 +253,12 @@ public:
         int blocks_mined = 0;
 
         while (!transaction_pool.empty() && blocks_mined < max_blocks) {
+            cout << "Transaction pool size: " << transaction_pool.size() << endl;
+cout << "Blocks mined: " << blocks_mined << endl;
             vector<Transaction> selected_transactions;
 
-            for (int i = 0; i < block_size; ++i) {
-                selected_transactions.push_back(Transaction(users[rand() % users.size()].getPublicKey(),
-                                                            users[rand() % users.size()].getPublicKey(),
-                                                            rand() % 1000 + 1));
+            for (int i = 0; i < block_size && i < transaction_pool.size(); ++i) {
+                selected_transactions.push_back(transaction_pool[i]);
             }
 
             Block new_block(selected_transactions, chain.back().hash);
@@ -270,7 +277,7 @@ public:
 
 int main() {
     Blockchain blockchain;
-    blockchain.run_simulation(100, 1000, 2, 3, 100000);
+    blockchain.run_simulation(100, 1000, 10, 2, 100000);
 
     return 0;
 }
